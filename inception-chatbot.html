@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mercury Chat</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f9f9f9;
+    color: #111;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  header {
+    width: 100%;
+    max-width: 680px;
+    padding: 20px 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #111; }
+
+  h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+
+  .model-tag {
+    margin-left: auto;
+    font-size: 11px;
+    color: #888;
+    background: #eee;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  .key-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .key-row input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 13px;
+    background: #fff;
+    color: #111;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .key-row input:focus { border-color: #aaa; }
+
+  .key-status {
+    font-size: 11px;
+    padding: 0 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #888;
+  }
+  .key-status.ok { color: #22a06b; }
+
+  hr { border: none; border-top: 1px solid #ebebeb; }
+
+  #chat {
+    flex: 1;
+    width: 100%;
+    max-width: 680px;
+    overflow-y: auto;
+    padding: 16px 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #bbb;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .msg { display: flex; flex-direction: column; gap: 4px; max-width: 88%; }
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.assistant { align-self: flex-start; align-items: flex-start; }
+
+  .bubble {
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .msg.user .bubble {
+    background: #111;
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg.assistant .bubble {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    color: #111;
+    border-bottom-left-radius: 4px;
+  }
+
+  .bubble.loading { color: #aaa; font-style: italic; }
+
+  .role-label {
+    font-size: 10px;
+    color: #bbb;
+    padding: 0 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  footer {
+    width: 100%;
+    max-width: 680px;
+    padding: 8px 16px 20px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 8px 8px 8px 14px;
+    transition: border-color 0.2s;
+  }
+  .input-row:focus-within { border-color: #aaa; }
+
+  textarea {
+    flex: 1;
+    border: none;
+    outline: none;
+    resize: none;
+    font-size: 14px;
+    font-family: inherit;
+    background: transparent;
+    color: #111;
+    max-height: 160px;
+    line-height: 1.5;
+  }
+
+  button#send {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: none;
+    background: #111;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+  }
+  button#send:disabled { opacity: 0.3; cursor: default; }
+  button#send svg { width: 16px; height: 16px; }
+
+  .hint { font-size: 11px; color: #ccc; text-align: center; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-row">
+    <div class="dot"></div>
+    <h1>Mercury Chat</h1>
+    <span class="model-tag">mercury-2</span>
+  </div>
+  <div class="key-row">
+    <input type="password" id="apiKey" placeholder="Paste your Inception API key…" autocomplete="off">
+    <span class="key-status" id="keyStatus">–</span>
+  </div>
+  <hr>
+</header>
+
+<div id="chat">
+  <div class="empty-state" id="emptyState">Enter your API key and start chatting ✦</div>
+</div>
+
+<footer>
+  <div class="input-row">
+    <textarea id="input" rows="1" placeholder="Send a message…"></textarea>
+    <button id="send" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+      </svg>
+    </button>
+  </div>
+  <div class="hint">Enter ↵ to send · Shift+Enter for newline</div>
+</footer>
+
+<script>
+  const API = "https://corsproxy.io/?url=https://api.inceptionlabs.ai/v1/chat/completions";
+  const MODEL = "mercury-2";
+
+  const keyInput = document.getElementById("apiKey");
+  keyInput.value = "sk_77e85b140053c0abaee56aa1370addfd";
+  const keyStatus = document.getElementById("keyStatus");
+  const chatEl = document.getElementById("chat");
+  const emptyState = document.getElementById("emptyState");
+  const input = document.getElementById("input");
+  const sendBtn = document.getElementById("send");
+
+  let history = [];
+  let busy = false;
+
+  // Auto-resize textarea
+  input.addEventListener("input", () => {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 160) + "px";
+    updateSend();
+  });
+
+  keyInput.addEventListener("input", () => {
+    const v = keyInput.value.trim();
+    if (v.length > 10) {
+      keyStatus.textContent = "✓ key set";
+      keyStatus.className = "key-status ok";
+    } else {
+      keyStatus.textContent = "–";
+      keyStatus.className = "key-status";
+    }
+    updateSend();
+  });
+
+  function updateSend() {
+    sendBtn.disabled = busy || !input.value.trim() || keyInput.value.trim().length < 10;
+  }
+
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!sendBtn.disabled) send();
+    }
+  });
+
+  sendBtn.addEventListener("click", send);
+
+  function addMsg(role, text, loading = false) {
+    emptyState.style.display = "none";
+    const wrap = document.createElement("div");
+    wrap.className = `msg ${role}`;
+    const label = document.createElement("div");
+    label.className = "role-label";
+    label.textContent = role === "user" ? "you" : "mercury";
+    const bubble = document.createElement("div");
+    bubble.className = "bubble" + (loading ? " loading" : "");
+    bubble.textContent = text;
+    if (role === "user") { wrap.appendChild(bubble); wrap.appendChild(label); }
+    else { wrap.appendChild(label); wrap.appendChild(bubble); }
+    chatEl.appendChild(wrap);
+    chatEl.scrollTop = chatEl.scrollHeight;
+    return bubble;
+  }
+
+  async function send() {
+    const text = input.value.trim();
+    if (!text || busy) return;
+    const key = keyInput.value.trim();
+    if (!key) return;
+
+    busy = true;
+    updateSend();
+    history.push({ role: "user", content: text });
+    addMsg("user", text);
+    input.value = "";
+    input.style.height = "auto";
+
+    const loadingBubble = addMsg("assistant", "Thinking…", true);
+
+    try {
+      const res = await fetch(API, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${key}`
+        },
+        body: JSON.stringify({ model: MODEL, messages: history, max_tokens: 1024 })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content || "(no response)";
+      loadingBubble.classList.remove("loading");
+      loadingBubble.textContent = reply;
+      history.push({ role: "assistant", content: reply });
+    } catch (err) {
+      loadingBubble.classList.remove("loading");
+      loadingBubble.style.color = "#e05252";
+      loadingBubble.textContent = "Error: " + err.message;
+    }
+
+    busy = false;
+    updateSend();
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+</script>
+</body>
+</html>
